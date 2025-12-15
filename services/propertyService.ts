@@ -84,10 +84,19 @@ export class PropertyService {
         } else {
           const errorText = await response.text();
           this.log(`Proxy Error (${response.status}): ${response.statusText}`);
-          this.log(`Error Details: ${errorText.substring(0, 100)}...`);
+          this.log(`Error Details: ${errorText.substring(0, 150)}`);
 
-          if (response.status === 404 && errorText.includes('<!DOCTYPE html>')) {
-            this.log("⚠️ API Route not found. Are you running 'npm run dev' locally? API routes only work on Vercel or 'vercel dev'.");
+          if (response.status === 404) {
+            if (errorText.includes('<!DOCTYPE html>')) {
+              this.log("⚠️ API Route not found on this environment.");
+            } else {
+              try {
+                const errJson = JSON.parse(errorText);
+                this.log(`Provider Message: ${errJson.title || 'Unknown'} - Status ${errJson.status}`);
+              } catch (e) {
+                this.log("Provider returned 404 (Endpoint likely incorrect)");
+              }
+            }
           }
 
           throw new Error(`API Error: ${response.status}`);
