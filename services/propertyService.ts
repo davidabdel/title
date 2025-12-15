@@ -6,6 +6,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class PropertyService {
   private static instance: PropertyService;
+  private static logListeners: ((msg: string) => void)[] = [];
 
   private constructor() { }
 
@@ -14,6 +15,16 @@ export class PropertyService {
       PropertyService.instance = new PropertyService();
     }
     return PropertyService.instance;
+  }
+
+  public static onLog(listener: (msg: string) => void) {
+    this.logListeners.push(listener);
+  }
+
+  private log(msg: string, data?: any) {
+    const message = data ? `${msg} ${JSON.stringify(data, null, 2)}` : msg;
+    console.log(`[PropertyService] ${message}`);
+    PropertyService.logListeners.forEach(l => l(message));
   }
 
   /**
@@ -41,7 +52,7 @@ export class PropertyService {
     // 1. Attempt Real API Call via Vercel Proxy
     if (!USE_MOCK_API) {
       try {
-        console.log(`[PropertyService] Searching via Vercel Proxy for: ${query}`);
+        this.log(`Searching via Proxy for: ${query}`);
 
         // Call local endpoint
         const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
@@ -51,9 +62,9 @@ export class PropertyService {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('[PropertyService] API Success:', data);
+          this.log('API Response received', data);
+
           if (data && data.properties) {
-            console.log('[PropertyService] Raw Properties:', data.properties);
             return data.properties.map((prop: any) => {
               return {
                 id: prop.propertyId || Math.random().toString(36).substr(2, 9),
@@ -67,14 +78,15 @@ export class PropertyService {
               };
             });
           }
+          this.log('API OK but no properties found.');
           // If response was OK but no properties, return empty list (don't fallback to mock)
           return [];
         } else {
-          console.warn(`[PropertyService] Proxy returned ${response.status}.`);
+          this.log(`Proxy Error: ${response.status} ${response.statusText}`);
           throw new Error(`API Error: ${response.status}`);
         }
-      } catch (error) {
-        console.error('[PropertyService] Proxy connection failed.', error);
+      } catch (error: any) {
+        this.log('Proxy connection failed', error.message);
         // If we want to ensure we NEVER show mock data when live, we should rethrow or return empty.
         // Returning empty array will show "No results found" instead of fake data.
         return [];

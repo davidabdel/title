@@ -12,17 +12,17 @@ type ViewState = 'search' | 'orders';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('search');
-  
+
   // Search State
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<AddressResult[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<AddressResult | null>(null);
-  
+
   // Document State
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [documents, setDocuments] = useState<PropertyDocument[]>([]);
-  
+
   // Cart & Order State
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
@@ -31,15 +31,22 @@ const App: React.FC = () => {
   const [lastOrderId, setLastOrderId] = useState<string>('');
 
   const propertyService = PropertyService.getInstance();
+  const [logs, setLogs] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    PropertyService.onLog((msg) => {
+      setLogs(prev => [...prev, msg].slice(-20)); // Keep last 20 logs
+    });
+  }, []);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-    
+
     setIsSearching(true);
     setSearchResults([]);
     setSelectedProperty(null);
     setOrderComplete(false);
-    
+
     try {
       const results = await propertyService.searchAddress(query);
       setSearchResults(results);
@@ -104,9 +111,9 @@ const App: React.FC = () => {
       // 4. Switch to Orders view after brief delay or immediately?
       // User flow: Show confirmation, then they can click "Go to Orders" or "New Search".
       // However, we also need to simulate the docs becoming ready.
-      
+
       setTimeout(() => {
-        setOrders(currentOrders => 
+        setOrders(currentOrders =>
           currentOrders.map(o => {
             if (o.id === id) {
               return {
@@ -144,33 +151,31 @@ const App: React.FC = () => {
               </svg>
               <span className="ml-2 text-xl font-bold text-slate-900">TitleFlow</span>
             </div>
-            
+
             <div className="flex items-center space-x-4">
-               <button 
-                 onClick={() => handleNavigation('search')}
-                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                   currentView === 'search' 
-                     ? 'bg-blue-50 text-blue-700' 
-                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                 }`}
-               >
-                 Search
-               </button>
-               <button 
-                 onClick={() => handleNavigation('orders')}
-                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                   currentView === 'orders' 
-                     ? 'bg-blue-50 text-blue-700' 
-                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                 }`}
-               >
-                 My Orders
-                 {orders.length > 0 && (
-                   <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
-                     {orders.length}
-                   </span>
-                 )}
-               </button>
+              <button
+                onClick={() => handleNavigation('search')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'search'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+              >
+                Search
+              </button>
+              <button
+                onClick={() => handleNavigation('orders')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'orders'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+              >
+                My Orders
+                {orders.length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
+                    {orders.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -194,42 +199,42 @@ const App: React.FC = () => {
                   We are processing your documents. You can track their status in the "My Orders" tab.
                 </p>
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 inline-block text-left mb-8">
-                    <p className="text-sm text-gray-500">Order Reference</p>
-                    <p className="text-2xl font-mono font-bold text-gray-800">{lastOrderId}</p>
+                  <p className="text-sm text-gray-500">Order Reference</p>
+                  <p className="text-2xl font-mono font-bold text-gray-800">{lastOrderId}</p>
                 </div>
                 <div className="flex justify-center gap-4">
-                    <button 
-                      onClick={() => handleNavigation('orders')}
-                      className="px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
-                    >
-                        View My Orders
-                    </button>
-                    <button 
-                      onClick={() => setOrderComplete(false)}
-                      className="px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                        New Search
-                    </button>
+                  <button
+                    onClick={() => handleNavigation('orders')}
+                    className="px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
+                  >
+                    View My Orders
+                  </button>
+                  <button
+                    onClick={() => setOrderComplete(false)}
+                    className="px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    New Search
+                  </button>
                 </div>
               </div>
             ) : (
               <>
-                <Hero 
-                  query={query} 
-                  setQuery={setQuery} 
-                  onSearch={handleSearch} 
-                  isLoading={isSearching} 
+                <Hero
+                  query={query}
+                  setQuery={setQuery}
+                  onSearch={handleSearch}
+                  isLoading={isSearching}
                 />
-                
-                <SearchResults 
-                  results={searchResults} 
-                  onSelect={handleSelectProperty} 
+
+                <SearchResults
+                  results={searchResults}
+                  onSelect={handleSelectProperty}
                 />
 
                 {selectedProperty && (
-                  <DocumentList 
-                    property={selectedProperty} 
-                    documents={documents} 
+                  <DocumentList
+                    property={selectedProperty}
+                    documents={documents}
                     onAddToCart={handleAddToCart}
                     cart={cart}
                     isLoading={isLoadingDocs}
@@ -243,11 +248,11 @@ const App: React.FC = () => {
 
       {/* Cart Overlay - Only show on Search view */}
       {currentView === 'search' && !orderComplete && (
-        <Cart 
-          items={cart} 
-          onRemove={handleRemoveFromCart} 
-          onCheckout={handleCheckout} 
-          isProcessing={isProcessingOrder} 
+        <Cart
+          items={cart}
+          onRemove={handleRemoveFromCart}
+          onCheckout={handleCheckout}
+          isProcessing={isProcessingOrder}
         />
       )}
 
@@ -257,13 +262,24 @@ const App: React.FC = () => {
       {/* Status Footer */}
       <footer className="bg-white border-t border-gray-200 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs text-gray-400">
-           <span>&copy; 2025 TitleFlow</span>
-           <div className="flex items-center gap-2">
-             <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
-             <span>System Status: Demo Mode (Mock Data Active)</span>
-           </div>
+          <span>&copy; 2025 TitleFlow</span>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-400"></div>
+            <span>System Ready</span>
+          </div>
         </div>
       </footer>
+
+      {/* Debug Logs Overlay */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-80 text-green-400 p-2 font-mono text-xs h-32 overflow-y-auto pointer-events-none z-[100]">
+        <div className="max-w-7xl mx-auto">
+          <div className="font-bold text-white mb-1">Live Debug Logs:</div>
+          {logs.map((log, i) => (
+            <div key={i}>{log}</div>
+          ))}
+          {logs.length === 0 && <div className="text-gray-500">Waiting for activity...</div>}
+        </div>
+      </div>
     </div>
   );
 };
