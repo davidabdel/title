@@ -33,6 +33,48 @@ const App: React.FC = () => {
   const propertyService = PropertyService.getInstance();
   const [logs, setLogs] = useState<string[]>([]);
 
+  // FIX: Add a ticker to keep polling alive if pending items exist
+  const [pollTick, setPollTick] = useState(0);
+
+  React.useEffect(() => {
+    const pendingItems = searchResults.filter(r => r.titleReference?.includes('PENDING'));
+    if (pendingItems.length > 0) {
+      const timer = setTimeout(() => setPollTick(t => t + 1), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchResults, pollTick]);
+
+  React.useEffect(() => {
+    // Perform actual poll on tick
+    const pendingItems = searchResults.filter(r => r.titleReference?.includes('PENDING'));
+    if (pendingItems.length === 0) return;
+
+    const checkStatus = async () => {
+      const updates = await Promise.all(pendingItems.map(async (item) => {
+        // Item ID is the Order ID for pending items based on propertyService logic
+        try {
+          const result = await propertyService.pollOrderStatus(item.id);
+          if (result && result.length > 0) {
+            return { id: item.id, newResult: result[0] };
+          }
+        } catch (e) {
+          console.error("Poll failed for", item.id, e);
+        }
+        return null;
+      }));
+
+      const validUpdates = updates.filter((u): u is { id: string, newResult: AddressResult } => u !== null);
+
+      if (validUpdates.length > 0) {
+        setSearchResults(prev => prev.map(p => {
+          const update = validUpdates.find(u => u.id === p.id);
+          return update ? update.newResult : p;
+        }));
+      }
+    };
+    checkStatus();
+  }, [pollTick, searchResults, propertyService]); // Added propertyService to dependencies for completeness
+
   React.useEffect(() => {
     PropertyService.onLog((msg) => {
       setLogs(prev => [...prev, msg].slice(-20)); // Keep last 20 logs
