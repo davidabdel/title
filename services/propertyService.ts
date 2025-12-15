@@ -55,9 +55,6 @@ export class PropertyService {
           if (data && data.properties) {
             console.log('[PropertyService] Raw Properties:', data.properties);
             return data.properties.map((prop: any) => {
-              // Log individual property for debugging
-              // console.log('Processing prop:', prop);
-
               return {
                 id: prop.propertyId || Math.random().toString(36).substr(2, 9),
                 fullAddress: prop.address?.fullAddress || prop.description || query,
@@ -65,21 +62,26 @@ export class PropertyService {
                 suburb: prop.address?.suburb || '',
                 state: prop.address?.state || '',
                 postcode: prop.address?.postcode || '',
-                // Explicitly look for title reference in multiple likely places
                 titleReference: prop.titleReference || prop.titleRef || (prop.attributes && prop.attributes.titleReference),
                 lotPlan: prop.lotPlan || prop.planLabel || (prop.attributes && prop.attributes.lotPlan)
               };
             });
           }
+          // If response was OK but no properties, return empty list (don't fallback to mock)
+          return [];
         } else {
-          console.warn(`[PropertyService] Proxy returned ${response.status}. Falling back to mock.`);
+          console.warn(`[PropertyService] Proxy returned ${response.status}.`);
+          throw new Error(`API Error: ${response.status}`);
         }
       } catch (error) {
-        console.warn('[PropertyService] Proxy connection failed. Falling back to mock data.', error);
+        console.error('[PropertyService] Proxy connection failed.', error);
+        // If we want to ensure we NEVER show mock data when live, we should rethrow or return empty.
+        // Returning empty array will show "No results found" instead of fake data.
+        return [];
       }
     }
 
-    // 2. Fallback to Mock Data
+    // 2. Fallback to Mock Data (ONLY if USE_MOCK_API is true)
     await delay(600);
     const normalizedQuery = this.normalizeAddress(query);
 
