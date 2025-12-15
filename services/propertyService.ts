@@ -82,7 +82,14 @@ export class PropertyService {
           // If response was OK but no properties, return empty list (don't fallback to mock)
           return [];
         } else {
-          this.log(`Proxy Error: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          this.log(`Proxy Error (${response.status}): ${response.statusText}`);
+          this.log(`Error Details: ${errorText.substring(0, 100)}...`);
+
+          if (response.status === 404 && errorText.includes('<!DOCTYPE html>')) {
+            this.log("⚠️ API Route not found. Are you running 'npm run dev' locally? API routes only work on Vercel or 'vercel dev'.");
+          }
+
           throw new Error(`API Error: ${response.status}`);
         }
       } catch (error: any) {
