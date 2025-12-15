@@ -170,6 +170,79 @@ export class PropertyService {
     }];
   }
 
+  /**
+   * Polls for order status.
+   * Returns AddressResult[] if complete, null if still pending.
+   */
+  async pollOrderStatus(orderId: string): Promise<AddressResult[] | null> {
+    if (USE_MOCK_API) {
+      // Mock simulation
+      await delay(2000);
+      return [{
+        id: 'mock_complete',
+        fullAddress: '49-51 Good Street, Westmead 2145',
+        street: '49-51 Good Street',
+        suburb: 'Westmead',
+        titleReference: '1/SP123456',
+        lotPlan: 'Lot 1 DP123456',
+        state: 'NSW',
+        postcode: '2145'
+      }];
+    }
+
+    try {
+      this.log(`Polling status for order ${orderId}...`);
+      const response = await fetch(`/api/status?orderId=${orderId}`);
+      const data = await response.json();
+
+      // Handle variations in status field ("orderStatus" vs "status")
+      const status = data.status || data.orderStatus;
+
+      if (status === 'Complete') {
+        this.log('Order Complete!', data);
+
+        // Map results similar to searchAddress
+        let props: any[] = [];
+        if (data.properties) props = data.properties;
+        else if (data.relatedTitles) props = data.relatedTitles;
+        else if (data.titleOrders) props = data.titleOrders;
+
+        if (props.length > 0) {
+          return props.map((prop: any) => ({
+            id: prop.propertyId || Math.random().toString(36).substr(2, 9),
+            fullAddress: prop.address?.fullAddress || prop.description || 'Unknown Address',
+            street: prop.address?.street || '',
+            suburb: prop.address?.suburb || '',
+            state: prop.address?.state || '',
+            postcode: prop.address?.postcode || '',
+            titleReference: prop.titleReference || prop.titleRef || prop.description, // Fallback
+            lotPlan: prop.lotPlan || prop.planLabel
+          }));
+        }
+        // Fallback if complete but no props array (maybe single result in root?)
+        return [{
+          id: data.orderId,
+          fullAddress: data.description || 'Verified Property',
+          street: '',
+          suburb: '',
+          state: '',
+          postcode: '',
+          titleReference: data.titleReference || 'Verified',
+          lotPlan: ''
+        }];
+
+      } else if (status === 'Error') {
+        throw new Error(data.failureReason || data.displayStatus || 'Order Failed');
+      }
+
+      return null; // Still pending
+
+    } catch (e) {
+      console.error("Polling error", e);
+      return null;
+    }
+  }
+
   async getAvailableDocuments(propertyId: string): Promise<PropertyDocument[]> {
     await delay(800);
     // In a real scenario, this would call /api/properties/{id}/documents
