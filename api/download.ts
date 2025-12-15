@@ -3,8 +3,8 @@ export const config = {
   runtime: 'edge',
 };
 
-const API_KEY = "XcDVk/K/ZugnYoiLsI3wIiQ+zS9lIB0LCbJgsRhrCEolRNs7bPvThTb5/611opvnIG6Eyorh1BjSaWQszFFek9RzCVJcMfOvSXAZ3TVgojQ=";
-const BASE_URL = "https://stagesearch.infotrack.com.au/services/customer-propertyenquiry/v1";
+const API_KEY = process.env.INFOTRACK_API_KEY || "XcDVk/K/ZugnYoiLsI3wIiQ+zS9lIB0LCbJgsRhrCEolRNs7bPvThTb5/611opvnIG6Eyorh1BjSaWQszFFek9RzCVJcMfOvSXAZ3TVgojQ=";
+const HOST = process.env.INFOTRACK_HOST || "https://stagesearch.infotrack.com.au";
 
 export default async function handler(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -15,15 +15,16 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/orders/${orderId}/download`, {
+    // Correct Endpoint: GET /v3/api/files/{orderId}
+    const response = await fetch(`${HOST}/service/au-api/v3/api/files/${orderId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${API_KEY}`
+        'Authorization': `ApiKey ${API_KEY}`
       }
     });
 
     if (!response.ok) {
-       return new Response(JSON.stringify({ error: 'Download failed' }), { status: response.status });
+      return new Response(JSON.stringify({ error: 'Download failed' }), { status: response.status });
     }
 
     const blob = await response.blob();
