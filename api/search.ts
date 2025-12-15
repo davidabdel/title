@@ -30,48 +30,62 @@ export default async function handler(req: Request) {
   let postcode = "";
 
   try {
-    // Clean up string
     const cleanQ = q.trim();
 
-    // Regex to find State and Postcode at the end
-    // Matches: ... (NSW|VIC...) (DDDD)
+    // 1. Try "State Postcode" pattern (e.g. NSW 2000)
     const locationRegex = /\s+(NSW|VIC|QLD|WA|SA|TAS|ACT|NT)\s+(\d{4})$/i;
     const match = cleanQ.match(locationRegex);
 
     if (match) {
       state = match[1].toUpperCase();
       postcode = match[2];
-
-      // Remove State and Postcode from remainder
-      let remainder = cleanQ.substring(0, match.index).trim();
-
-      // Now try to separate Street from Suburb. 
-      // This is hard without a comma. We'll check if there is a comma.
+      const remainder = cleanQ.substring(0, match.index).trim();
+      // Split remainder logic...
       if (remainder.includes(',')) {
         const parts = remainder.split(',');
         street = parts[0].trim();
         suburb = parts[1].trim();
       } else {
-        // Heuristic: Assume last word is Suburb (bad assumption but better than nothing for "Westmead")
-        // Or better, just put it all in street if unsure, but API likely wants suburb.
-        // Let's assume the user entered "Unit 1 49-51 Good Street Westmead"
-        // Street: Unit 1 49-51 Good Street
-        // Suburb: Westmead
-
-        const lastSpaceIndex = remainder.lastIndexOf(' ');
-        if (lastSpaceIndex > -1) {
-          suburb = remainder.substring(lastSpaceIndex + 1);
-          street = remainder.substring(0, lastSpaceIndex);
-        } else {
-          street = remainder;
+        street = remainder; // Fallback
+        // Try to find suburb by looking at last words? hard without delimiters
+        // basic fallback:
+        const separateIdx = remainder.lastIndexOf(' ');
+        if (separateIdx > -1) {
+          suburb = remainder.substring(separateIdx + 1);
+          street = remainder.substring(0, separateIdx);
         }
       }
     } else {
-      // If no state/postcode found at end, fall back to simple comma split or default
-      const parts = cleanQ.split(',');
-      if (parts.length > 1) {
-        street = parts[0].trim();
-        suburb = parts[1].trim();
+      // 2. Try just "Postcode" pattern (e.g. Westmead 2145)
+      const postcodeRegex = /\s+(\d{4})$/;
+      const pcMatch = cleanQ.match(postcodeRegex);
+      if (pcMatch) {
+        postcode = pcMatch[1];
+        const remainder = cleanQ.substring(0, pcMatch.index).trim();
+
+        // Remainder is "Street, Suburb" or "Street Suburb"
+        if (remainder.includes(',')) {
+          const splits = remainder.split(',');
+          street = splits[0].trim();
+          suburb = splits[1].trim();
+        } else {
+          // "49-51 Good Street Westmead"
+          // Assume last word is Suburb
+          const separateIdx = remainder.lastIndexOf(' ');
+          if (separateIdx > -1) {
+            suburb = remainder.substring(separateIdx + 1);
+            street = remainder.substring(0, separateIdx);
+          } else {
+            street = remainder;
+          }
+        }
+      } else {
+        // 3. Fallback csv
+        const parts = cleanQ.split(',');
+        if (parts.length > 1) {
+          street = parts[0].trim();
+          suburb = parts[1].trim();
+        }
       }
     }
   } catch (e) {
@@ -89,17 +103,18 @@ export default async function handler(req: Request) {
   console.log(`[API] Request Body: ${JSON.stringify(body)}`);
 
   /* 
+  /* 
      DEBUG AUTH:
-     Key is binary when decoded, so it is likely an Opaque Token (Bearer).
-     Switching from Basic to Bearer.
+     Swagger definition says: 
+     "Include the provided key in the Authorization header as follows: Authorization: ApiKey <key>"
   */
-  console.log(`[API] Auth Header Preview: Bearer ${API_KEY.substring(0, 10)}...`);
+  console.log(`[API] Auth Header Preview: ApiKey ${API_KEY.substring(0, 10)}...`);
 
   try {
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        'Authorization': `ApiKey ${API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
