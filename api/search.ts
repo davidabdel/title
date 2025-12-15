@@ -7,8 +7,8 @@ export const config = {
 const API_KEY = process.env.INFOTRACK_API_KEY || "XcDVk/K/ZugnYoiLsI3wIiQ+zS9lIB0LCbJgsRhrCEolRNs7bPvThTb5/611opvnIG6Eyorh1BjSaWQszFFek9RzCVJcMfOvSXAZ3TVgojQ=";
 // Update base URL to match the documentation path root if needed, or keep stagesearch logic
 // PROD HOST: https://search.infotrack.com.au
-// STAGE HOST: https://stagesearch.infotrack.com.au (May require different path structure)
-const HOST = process.env.INFOTRACK_HOST || "https://search.infotrack.com.au";
+// STAGE HOST: https://stagesearch.infotrack.com.au
+const HOST = process.env.INFOTRACK_HOST || "https://stagesearch.infotrack.com.au";
 // Prepend /service/au-api based on Swagger URL pattern observed in docs
 const ENDPOINT = "/service/au-api/v3/api/national/titles/address";
 
