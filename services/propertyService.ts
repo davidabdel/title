@@ -282,26 +282,24 @@ export class PropertyService {
    * Downloads a document. 
    */
   async downloadDocument(orderId: string, docType: string, address: string): Promise<Blob> {
-    let content: string | null = null;
-
     // 1. Attempt Real API Download via Proxy
     if (!USE_MOCK_API) {
-      try {
-        const response = await fetch(`/api/download?orderId=${orderId}`, {
-          method: 'GET'
-        });
-        if (response.ok) {
-          return await response.blob();
-        }
-      } catch (e) {
-        console.warn("[PropertyService] API Download failed. Generating realistic mock.");
+      const response = await fetch(`/api/download?orderId=${orderId}`, {
+        method: 'GET'
+      });
+
+      if (response.ok) {
+        return await response.blob();
       }
+
+      const errorText = await response.text();
+      console.error(`[PropertyService] Download failed: ${response.status}`, errorText);
+      throw new Error(`Download failed: ${response.statusText} (${response.status})`);
     }
 
+    // 2. Mock Data Flow (Only if USE_MOCK_API is true)
     await delay(1000);
-
-    // 2. Generate Realistic Content based on Document Type and Address
-    content = this.generateMockDocumentContent(docType, address, orderId);
+    const content = this.generateMockDocumentContent(docType, address, orderId);
     return new Blob([content], { type: 'text/plain' });
   }
 
