@@ -17,8 +17,11 @@ export default async function handler(req: Request) {
 
   console.log(`[API] Searching InfoTrack for: ${q}`);
 
+  const targetUrl = `${BASE_URL}/properties?q=${encodeURIComponent(q)}`;
+  console.log(`[API] Target URL: ${targetUrl}`);
+
   try {
-    const response = await fetch(`${BASE_URL}/properties?q=${encodeURIComponent(q)}`, {
+    const response = await fetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${API_KEY}`,
@@ -27,10 +30,10 @@ export default async function handler(req: Request) {
     });
 
     if (!response.ok) {
-        console.error(`[API] InfoTrack Error: ${response.status} ${response.statusText}`);
-        const text = await response.text();
-        console.error(`[API] Response body: ${text}`);
-        return new Response(JSON.stringify({ error: `Provider Error: ${response.statusText}` }), { status: response.status });
+      console.error(`[API] InfoTrack Error: ${response.status} ${response.statusText}`);
+      const text = await response.text();
+      console.error(`[API] Response body: ${text}`);
+      return new Response(JSON.stringify({ error: `Provider Error: ${response.statusText}` }), { status: response.status });
     }
 
     const data = await response.json();
