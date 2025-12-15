@@ -92,11 +92,30 @@ export default async function handler(req: Request) {
     console.warn("[API] Address parsing failed, using simple fallback");
   }
 
+  // Split street into number and name
+  // e.g. "49-51 Good Street" -> Number: "49-51", Name: "Good Street"
+  let streetNumber = "";
+  let streetName = "";
+  let streetType = ""; // Some APIs might need this separated
+
+  if (street) {
+    const parts = street.trim().split(/\s+/);
+    if (parts.length > 0) {
+      // Assume first part is number
+      streetNumber = parts[0];
+      // Rest is valid street name string for now
+      streetName = parts.slice(1).join(' ');
+    }
+  }
+
   const targetUrl = `${HOST}${ENDPOINT}?state=${state}`;
   console.log(`[API] Target URL: ${targetUrl}`);
 
+  // The error indicated "Street Name" and "Street Number" are required.
+  // We will send specific fields.
   const body = {
-    streetAddress: street,
+    streetNumber: streetNumber,
+    streetName: streetName,
     suburb: suburb,
     postcode: postcode,
     clientReference: `TitleFlow-${Date.now()}`
