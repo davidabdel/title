@@ -6,7 +6,9 @@ export const config = {
 // Fallback is provided but environment variable is preferred
 const API_KEY = process.env.INFOTRACK_API_KEY || "XcDVk/K/ZugnYoiLsI3wIiQ+zS9lIB0LCbJgsRhrCEolRNs7bPvThTb5/611opvnIG6Eyorh1BjSaWQszFFek9RzCVJcMfOvSXAZ3TVgojQ=";
 // Update base URL to match the documentation path root if needed, or keep stagesearch logic
-const HOST = "https://stagesearch.infotrack.com.au";
+// PROD HOST: https://search.infotrack.com.au
+// STAGE HOST: https://stagesearch.infotrack.com.au (May require different path structure)
+const HOST = process.env.INFOTRACK_HOST || "https://search.infotrack.com.au";
 const ENDPOINT = "/v3/api/national/titles/address";
 
 export default async function handler(req: Request) {
