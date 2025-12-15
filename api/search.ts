@@ -98,7 +98,8 @@ export default async function handler(req: Request) {
   const body = {
     streetAddress: street,
     suburb: suburb,
-    postcode: postcode
+    postcode: postcode,
+    clientReference: `TitleFlow-${Date.now()}`
   };
   console.log(`[API] Request Body: ${JSON.stringify(body)}`);
 
