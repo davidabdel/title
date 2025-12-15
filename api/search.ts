@@ -98,23 +98,42 @@ export default async function handler(req: Request) {
   let streetName = "";
   let streetType = ""; // Some APIs might need this separated
 
+  // Split street into number and name
+  // e.g. "49-51 Good Street" -> Number: "49-51", Name: "Good Street"
+  let streetNumberString = "";
+  // streetName is already declared above
+  // Optional: Extract unit number if possible to be compliant with unitFlatShopNumber
+  // But for now, let's focus on StreetNumberRange object structure which caused 400.
+
   if (street) {
     const parts = street.trim().split(/\s+/);
     if (parts.length > 0) {
-      // Assume first part is number
-      streetNumber = parts[0];
-      // Rest is valid street name string for now
+      streetNumberString = parts[0];
       streetName = parts.slice(1).join(' ');
     }
+  }
+
+  // Construct StreetNumberRange Object
+  // Schema: { streetNumberFrom: string, streetNumberTo: string, ... }
+  let streetNumberObj = {};
+
+  if (streetNumberString.includes('-')) {
+    const rangeParts = streetNumberString.split('-');
+    streetNumberObj = {
+      streetNumberFrom: rangeParts[0],
+      streetNumberTo: rangeParts[1]
+    };
+  } else {
+    streetNumberObj = {
+      streetNumberFrom: streetNumberString
+    };
   }
 
   const targetUrl = `${HOST}${ENDPOINT}?state=${state}`;
   console.log(`[API] Target URL: ${targetUrl}`);
 
-  // The error indicated "Street Name" and "Street Number" are required.
-  // We will send specific fields.
   const body = {
-    streetNumber: streetNumber,
+    streetNumber: streetNumberObj, // Must be object
     streetName: streetName,
     suburb: suburb,
     postcode: postcode,
@@ -122,7 +141,6 @@ export default async function handler(req: Request) {
   };
   console.log(`[API] Request Body: ${JSON.stringify(body)}`);
 
-  /* 
   /* 
      DEBUG AUTH:
      Swagger definition says: 
