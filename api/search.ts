@@ -64,6 +64,18 @@ export default async function handler(req: Request) {
   };
   console.log(`[API] Request Body: ${JSON.stringify(body)}`);
 
+  /* 
+     DEBUG AUTH:
+     The provided key is very long and ends in '='. It looks like a pre-encoded Basic string or an encrypted token.
+     If it is a raw API Key (not base64), we might need to base64 encode it.
+     But usually these long keys are the full hash.
+  */
+  // const authHeader = `Basic ${API_KEY}`; 
+  // Let's try passing it exactly as is, but log the length.
+
+  console.log(`[API] Auth Header Length: ${API_KEY.length}`);
+  console.log(`[API] Auth Header Preview: Basic ${API_KEY.substring(0, 10)}...`);
+
   try {
     const response = await fetch(targetUrl, {
       method: 'POST',
