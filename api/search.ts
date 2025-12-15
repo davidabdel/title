@@ -23,35 +23,59 @@ export default async function handler(req: Request) {
   console.log(`[API] Processing Search: ${q}`);
 
   // Simple Address Parser
-  // Expected format: "123 Street Name, Suburb State Postcode"
-  // This is a naive implementation; production would use a robust address parser library.
+  // Parsing logic to handle both "Street, Suburb" and "Street Suburb State Postcode" formats
   let street = q;
   let suburb = "";
   let state = "NSW"; // Default
   let postcode = "";
 
   try {
-    // Very basic split logic
-    const parts = q.split(',');
-    if (parts.length > 1) {
-      street = parts[0].trim();
-      const remainder = parts[parts.length - 1].trim();
+    // Clean up string
+    const cleanQ = q.trim();
 
-      // Try to extract State and Postcode from end
-      const stateMatch = remainder.match(/\b(NSW|VIC|QLD|WA|SA|TAS|ACT|NT)\b/i);
-      const postCodeMatch = remainder.match(/\b(\d{4})\b/);
+    // Regex to find State and Postcode at the end
+    // Matches: ... (NSW|VIC...) (DDDD)
+    const locationRegex = /\s+(NSW|VIC|QLD|WA|SA|TAS|ACT|NT)\s+(\d{4})$/i;
+    const match = cleanQ.match(locationRegex);
 
-      if (stateMatch) state = stateMatch[0].toUpperCase();
-      if (postCodeMatch) postcode = postCodeMatch[0];
+    if (match) {
+      state = match[1].toUpperCase();
+      postcode = match[2];
 
-      // Suburb is likely what's left in the remainder before state/postcode
-      suburb = remainder
-        .replace(state, '')
-        .replace(postcode, '')
-        .trim();
+      // Remove State and Postcode from remainder
+      let remainder = cleanQ.substring(0, match.index).trim();
+
+      // Now try to separate Street from Suburb. 
+      // This is hard without a comma. We'll check if there is a comma.
+      if (remainder.includes(',')) {
+        const parts = remainder.split(',');
+        street = parts[0].trim();
+        suburb = parts[1].trim();
+      } else {
+        // Heuristic: Assume last word is Suburb (bad assumption but better than nothing for "Westmead")
+        // Or better, just put it all in street if unsure, but API likely wants suburb.
+        // Let's assume the user entered "Unit 1 49-51 Good Street Westmead"
+        // Street: Unit 1 49-51 Good Street
+        // Suburb: Westmead
+
+        const lastSpaceIndex = remainder.lastIndexOf(' ');
+        if (lastSpaceIndex > -1) {
+          suburb = remainder.substring(lastSpaceIndex + 1);
+          street = remainder.substring(0, lastSpaceIndex);
+        } else {
+          street = remainder;
+        }
+      }
+    } else {
+      // If no state/postcode found at end, fall back to simple comma split or default
+      const parts = cleanQ.split(',');
+      if (parts.length > 1) {
+        street = parts[0].trim();
+        suburb = parts[1].trim();
+      }
     }
   } catch (e) {
-    console.warn("[API] Address parsing failed, using defaults");
+    console.warn("[API] Address parsing failed, using simple fallback");
   }
 
   const targetUrl = `${HOST}${ENDPOINT}?state=${state}`;
@@ -66,21 +90,16 @@ export default async function handler(req: Request) {
 
   /* 
      DEBUG AUTH:
-     The provided key is very long and ends in '='. It looks like a pre-encoded Basic string or an encrypted token.
-     If it is a raw API Key (not base64), we might need to base64 encode it.
-     But usually these long keys are the full hash.
+     Key is binary when decoded, so it is likely an Opaque Token (Bearer).
+     Switching from Basic to Bearer.
   */
-  // const authHeader = `Basic ${API_KEY}`; 
-  // Let's try passing it exactly as is, but log the length.
-
-  console.log(`[API] Auth Header Length: ${API_KEY.length}`);
-  console.log(`[API] Auth Header Preview: Basic ${API_KEY.substring(0, 10)}...`);
+  console.log(`[API] Auth Header Preview: Bearer ${API_KEY.substring(0, 10)}...`);
 
   try {
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${API_KEY}`,
+        'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
