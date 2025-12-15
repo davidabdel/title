@@ -155,6 +155,7 @@ export default async function handler(req: Request) {
     streetType: streetType, // Added Type
     suburb: suburb,
     postcode: postcode,
+    autoOrderPrimaryTitle: false, // Don't order immediately, just list results
     clientReference: `TitleFlow-${Date.now()}`
   };
   console.log(`[API] Request Body: ${JSON.stringify(body)}`);
