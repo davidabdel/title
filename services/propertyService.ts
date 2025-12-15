@@ -7,7 +7,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export class PropertyService {
   private static instance: PropertyService;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): PropertyService {
     if (!PropertyService.instance) {
@@ -42,7 +42,7 @@ export class PropertyService {
     if (!USE_MOCK_API) {
       try {
         console.log(`[PropertyService] Searching via Vercel Proxy for: ${query}`);
-        
+
         // Call local endpoint
         const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
           method: 'GET',
@@ -53,19 +53,26 @@ export class PropertyService {
           const data = await response.json();
           console.log('[PropertyService] API Success:', data);
           if (data && data.properties) {
-            return data.properties.map((prop: any) => ({
-              id: prop.propertyId || Math.random().toString(36).substr(2, 9),
-              fullAddress: prop.address?.fullAddress || prop.description || query,
-              street: prop.address?.street || '',
-              suburb: prop.address?.suburb || '',
-              state: prop.address?.state || '',
-              postcode: prop.address?.postcode || '',
-              titleReference: prop.titleReference, 
-              lotPlan: prop.lotPlan
-            }));
+            console.log('[PropertyService] Raw Properties:', data.properties);
+            return data.properties.map((prop: any) => {
+              // Log individual property for debugging
+              // console.log('Processing prop:', prop);
+
+              return {
+                id: prop.propertyId || Math.random().toString(36).substr(2, 9),
+                fullAddress: prop.address?.fullAddress || prop.description || query,
+                street: prop.address?.street || '',
+                suburb: prop.address?.suburb || '',
+                state: prop.address?.state || '',
+                postcode: prop.address?.postcode || '',
+                // Explicitly look for title reference in multiple likely places
+                titleReference: prop.titleReference || prop.titleRef || (prop.attributes && prop.attributes.titleReference),
+                lotPlan: prop.lotPlan || prop.planLabel || (prop.attributes && prop.attributes.lotPlan)
+              };
+            });
           }
         } else {
-             console.warn(`[PropertyService] Proxy returned ${response.status}. Falling back to mock.`);
+          console.warn(`[PropertyService] Proxy returned ${response.status}. Falling back to mock.`);
         }
       } catch (error) {
         console.warn('[PropertyService] Proxy connection failed. Falling back to mock data.', error);
@@ -73,32 +80,32 @@ export class PropertyService {
     }
 
     // 2. Fallback to Mock Data
-    await delay(600); 
+    await delay(600);
     const normalizedQuery = this.normalizeAddress(query);
-    
+
     // Fuzzy match logic
     const knownMocks = MOCK_ADDRESSES.filter(addr => {
-        const normalizedMock = this.normalizeAddress(addr.fullAddress);
-        const normalizedTitle = addr.titleReference ? this.normalizeAddress(addr.titleReference) : '';
-        const normalizedLot = addr.lotPlan ? this.normalizeAddress(addr.lotPlan) : '';
+      const normalizedMock = this.normalizeAddress(addr.fullAddress);
+      const normalizedTitle = addr.titleReference ? this.normalizeAddress(addr.titleReference) : '';
+      const normalizedLot = addr.lotPlan ? this.normalizeAddress(addr.lotPlan) : '';
 
-        return normalizedMock.includes(normalizedQuery) || 
-               normalizedTitle.includes(normalizedQuery) || 
-               normalizedLot.includes(normalizedQuery);
+      return normalizedMock.includes(normalizedQuery) ||
+        normalizedTitle.includes(normalizedQuery) ||
+        normalizedLot.includes(normalizedQuery);
     });
 
     if (knownMocks.length > 0) return knownMocks;
 
     // Dynamic Mock generation for unknown addresses
     return [{
-        id: `sim_${Math.random().toString(36).substr(2,5)}`,
-        fullAddress: query.toUpperCase(), 
-        street: query.split(',')[0] || query,
-        suburb: query.split(',')[1] || 'UNKNOWN',
-        state: 'NSW',
-        postcode: '2000',
-        lotPlan: '1//DP999999',
-        titleReference: '1/DP999999'
+      id: `sim_${Math.random().toString(36).substr(2, 5)}`,
+      fullAddress: query.toUpperCase(),
+      street: query.split(',')[0] || query,
+      suburb: query.split(',')[1] || 'UNKNOWN',
+      state: 'NSW',
+      postcode: '2000',
+      lotPlan: '1//DP999999',
+      titleReference: '1/DP999999'
     }];
   }
 
@@ -108,29 +115,29 @@ export class PropertyService {
     // Keeping this mock for now as the user didn't provide that specific endpoint
     return MOCK_DOCUMENTS.map(doc => ({
       ...doc,
-      available: true 
+      available: true
     }));
   }
 
   async orderDocuments(items: { propertyId: string, documentId: string }[]): Promise<string> {
     if (!USE_MOCK_API) {
-        try {
-            console.log('[PropertyService] Placing Order via Proxy...');
-            const response = await fetch(`/api/order`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    items: items.map(i => ({ propertyId: i.propertyId, productCode: i.documentId }))
-                })
-            });
+      try {
+        console.log('[PropertyService] Placing Order via Proxy...');
+        const response = await fetch(`/api/order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items.map(i => ({ propertyId: i.propertyId, productCode: i.documentId }))
+          })
+        });
 
-            if (response.ok) {
-                const data = await response.json();
-                return data.orderId || `ORD-${Math.floor(Math.random() * 1000000)}`;
-            }
-        } catch (e) {
-            console.warn("[PropertyService] API Order failed. Using mock order ID.");
+        if (response.ok) {
+          const data = await response.json();
+          return data.orderId || `ORD-${Math.floor(Math.random() * 1000000)}`;
         }
+      } catch (e) {
+        console.warn("[PropertyService] API Order failed. Using mock order ID.");
+      }
     }
 
     await delay(1500);
@@ -141,59 +148,59 @@ export class PropertyService {
    * Downloads a document. 
    */
   async downloadDocument(orderId: string, docType: string, address: string): Promise<Blob> {
-      let content: string | null = null;
-      
-      // 1. Attempt Real API Download via Proxy
-      if (!USE_MOCK_API) {
-        try {
-            const response = await fetch(`/api/download?orderId=${orderId}`, {
-                method: 'GET'
-            });
-            if (response.ok) {
-                return await response.blob();
-            }
-        } catch (e) {
-            console.warn("[PropertyService] API Download failed. Generating realistic mock.");
-        }
-      }
+    let content: string | null = null;
 
-      await delay(1000);
-      
-      // 2. Generate Realistic Content based on Document Type and Address
-      content = this.generateMockDocumentContent(docType, address, orderId);
-      return new Blob([content], { type: 'text/plain' });
+    // 1. Attempt Real API Download via Proxy
+    if (!USE_MOCK_API) {
+      try {
+        const response = await fetch(`/api/download?orderId=${orderId}`, {
+          method: 'GET'
+        });
+        if (response.ok) {
+          return await response.blob();
+        }
+      } catch (e) {
+        console.warn("[PropertyService] API Download failed. Generating realistic mock.");
+      }
+    }
+
+    await delay(1000);
+
+    // 2. Generate Realistic Content based on Document Type and Address
+    content = this.generateMockDocumentContent(docType, address, orderId);
+    return new Blob([content], { type: 'text/plain' });
   }
 
   private generateMockDocumentContent(type: string, address: string, orderId: string): string {
-      const date = new Date().toLocaleDateString();
-      const time = new Date().toLocaleTimeString();
-      
-      const isTitleAlertCase = address.includes('SP724538');
-      const isPrestonsCase = this.normalizeAddress(address).includes('prestons') || address.includes('2331/1092549');
+    const date = new Date().toLocaleDateString();
+    const time = new Date().toLocaleTimeString();
 
-      let lotPlan = `Lot 1 in Deposited Plan ${Math.floor(Math.random() * 900000)}`;
-      let owner = "JOHN DOE & JANE DOE"; 
-      let unregisteredDealings = "NIL";
-      let lga = "SYDNEY";
-      let parish = "ALEXANDRIA";
+    const isTitleAlertCase = address.includes('SP724538');
+    const isPrestonsCase = this.normalizeAddress(address).includes('prestons') || address.includes('2331/1092549');
 
-      const isTitleRef = address.match(/\d+\/+[A-Z]+\d+/);
-      if (isTitleRef) lotPlan = address;
+    let lotPlan = `Lot 1 in Deposited Plan ${Math.floor(Math.random() * 900000)}`;
+    let owner = "JOHN DOE & JANE DOE";
+    let unregisteredDealings = "NIL";
+    let lga = "SYDNEY";
+    let parish = "ALEXANDRIA";
 
-      if (isPrestonsCase) {
-        lotPlan = "Lot 2331 in Deposited Plan 1092549";
-        owner = "MICHAEL SMITH & SARAH SMITH";
-        lga = "LIVERPOOL";
-        parish = "MINTO";
-      }
+    const isTitleRef = address.match(/\d+\/+[A-Z]+\d+/);
+    if (isTitleRef) lotPlan = address;
 
-      if (isTitleAlertCase) {
-          owner = "ROBERT SMITH";
-          unregisteredDealings = "AH123456  CAVEAT  (DATED 14/12/2025)";
-      }
+    if (isPrestonsCase) {
+      lotPlan = "Lot 2331 in Deposited Plan 1092549";
+      owner = "MICHAEL SMITH & SARAH SMITH";
+      lga = "LIVERPOOL";
+      parish = "MINTO";
+    }
 
-      if (type.includes('Title Search')) {
-        return `LAND REGISTRY SERVICES - TITLE SEARCH
+    if (isTitleAlertCase) {
+      owner = "ROBERT SMITH";
+      unregisteredDealings = "AH123456  CAVEAT  (DATED 14/12/2025)";
+    }
+
+    if (type.includes('Title Search')) {
+      return `LAND REGISTRY SERVICES - TITLE SEARCH
 --------------------------------------------------
 Search Date: ${date}
 Time: ${time}
@@ -221,10 +228,10 @@ UNREGISTERED DEALINGS: ${unregisteredDealings}
 
 *** END OF SEARCH ***
 (Printed via TitleFlow System)`;
-      }
+    }
 
-      if (type.includes('Plan')) {
-          return `[OFFICIAL PLAN IMAGE PLACEHOLDER]
+    if (type.includes('Plan')) {
+      return `[OFFICIAL PLAN IMAGE PLACEHOLDER]
           
 DEPOSITED PLAN: ${lotPlan.includes('DP') ? lotPlan.split('Plan ')[1] : '876543'}
 ---------------------
@@ -244,9 +251,9 @@ __________________________
 
 Surveyor: B. BUILDER
 Registered: 12/03/1995`;
-      }
+    }
 
-      return `OFFICIAL DOCUMENT: ${type.toUpperCase()}
+    return `OFFICIAL DOCUMENT: ${type.toUpperCase()}
 Property: ${address}
 Order ID: ${orderId}
 Date: ${date}
