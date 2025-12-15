@@ -15,15 +15,49 @@ export default async function handler(req: Request) {
 
   try {
     const body = await req.json();
-    const { street, suburb, state, postcode, clientReference, titleReference } = body;
+    const { street, suburb, state, postcode, clientReference, titleReference, address } = body;
+
+    let parsedStreet = street || "";
+    let parsedSuburb = suburb || "";
+    let parsedState = state || "NSW";
+    let parsedPostcode = postcode || "";
+
+    // Fallback Parsing if structured data is missing but we have full address
+    if ((!street || !state) && address) {
+      console.log(`[API Order] Parsing fallback address: ${address}`);
+      const cleanQ = address.trim();
+
+      // Try "State Postcode" pattern (e.g. NSW 2000)
+      const locationRegex = /\s+(NSW|VIC|QLD|WA|SA|TAS|ACT|NT)\s+(\d{4})$/i;
+      const match = cleanQ.match(locationRegex);
+
+      if (match) {
+        parsedState = match[1].toUpperCase();
+        parsedPostcode = match[2];
+        const remainder = cleanQ.substring(0, match.index).trim();
+
+        if (remainder.includes(',')) {
+          const parts = remainder.split(',');
+          parsedStreet = parts[0].trim();
+          parsedSuburb = parts[1].trim();
+        } else {
+          parsedStreet = remainder;
+          const separateIdx = remainder.lastIndexOf(' ');
+          if (separateIdx > -1) {
+            parsedSuburb = remainder.substring(separateIdx + 1);
+            parsedStreet = remainder.substring(0, separateIdx);
+          }
+        }
+      }
+    }
 
     // Address Parsing Logic (Duplicated from search.ts for robustness)
     let streetNumberString = "";
     let streetName = "";
     let streetType = "";
 
-    if (street) {
-      const parts = street.trim().split(/\s+/);
+    if (parsedStreet) {
+      const parts = parsedStreet.trim().split(/\s+/);
       if (parts.length > 0) {
         streetNumberString = parts[0];
         // Identify if the first part is actually a number
@@ -65,9 +99,9 @@ export default async function handler(req: Request) {
       streetNumber: streetNumberObj,
       streetName: streetName,
       streetType: streetType,
-      suburb: suburb,
-      state: state, // Ensure simple state (e.g. 'NSW')
-      postcode: postcode,
+      suburb: parsedSuburb,
+      state: parsedState, // Ensure simple state (e.g. 'NSW')
+      postcode: parsedPostcode,
       autoOrderPrimaryTitle: true, // TRIGGER ORDER
       clientReference: clientReference || `TitleFlow-${Date.now()}`
     };

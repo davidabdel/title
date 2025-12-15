@@ -263,6 +263,7 @@ export class PropertyService {
         // Construct payload based on available data
         const payload = {
           titleReference: item.titleReference,
+          address: item.address, // Pass full address for fallback parsing
           street: item.street, // api/order will need to parse this or address
           suburb: item.suburb,
           state: item.state,
