@@ -64,8 +64,39 @@ export class PropertyService {
           const data = await response.json();
           this.log('API Response received', data);
 
-          if (data && data.properties) {
-            return data.properties.map((prop: any) => {
+          // Check for different response structures
+          let props: any[] = [];
+
+          if (data.properties) {
+            props = data.properties;
+          } else if (data.relatedTitles) {
+            props = data.relatedTitles.map((t: any) => ({
+              titleReference: t.titleReference,
+              display: `Title ${t.titleReference}`
+            }));
+          } else if (data.titleOrders && Array.isArray(data.titleOrders)) {
+            // Sometimes results are in titleOrders if it auto-ordered
+            props = data.titleOrders.map((t: any) => ({
+              titleReference: t.titleReference,
+              display: `Order ${t.orderId} - ${t.status}`
+            }));
+          } else if (data.status === 'Pending' || data.status === 'Waiting') {
+            this.log("⚠️ Search initiated but result is Pending. Staging might be slow or require polling.");
+            // We could return a dummy 'Pending' result to show the user
+            return [{
+              id: data.orderId || 'pending',
+              fullAddress: query,
+              street: 'Processing...',
+              suburb: '',
+              state: '',
+              postcode: '',
+              titleReference: `PENDING (Order ${data.orderId})`,
+              lotPlan: 'Checking...'
+            }];
+          }
+
+          if (props.length > 0) {
+            return props.map((prop: any) => {
               return {
                 id: prop.propertyId || Math.random().toString(36).substr(2, 9),
                 fullAddress: prop.address?.fullAddress || prop.description || query,
@@ -73,7 +104,7 @@ export class PropertyService {
                 suburb: prop.address?.suburb || '',
                 state: prop.address?.state || '',
                 postcode: prop.address?.postcode || '',
-                titleReference: prop.titleReference || prop.titleRef || (prop.attributes && prop.attributes.titleReference),
+                titleReference: prop.titleReference || prop.titleRef || (prop.attributes && prop.attributes.titleReference) || prop.display,
                 lotPlan: prop.lotPlan || prop.planLabel || (prop.attributes && prop.attributes.lotPlan)
               };
             });
