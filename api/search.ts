@@ -129,21 +129,39 @@ export default async function handler(req: Request) {
     };
   }
 
+  // Extract Street Type if possible (e.g. "Good Street" -> Name: "Good", Type: "Street")
+  // streetType declared above
+  if (streetName) {
+    const nameParts = streetName.split(/\s+/);
+    if (nameParts.length > 1) {
+      // Check last part against common types (or just assume last word is type)
+      // Common list: Street, St, Road, Rd, Avenue, Ave, Close, Cl, Lane, Ln...
+      // For simplicity, we'll assume the last word is the type if the name has multiple words.
+      const lastWord = nameParts[nameParts.length - 1];
+      // Simple validation: is it a word?
+      if (/^[a-zA-Z]+$/.test(lastWord)) {
+        streetType = lastWord;
+        streetName = nameParts.slice(0, -1).join(' ');
+      }
+    }
+  }
+
   const targetUrl = `${HOST}${ENDPOINT}?state=${state}`;
   console.log(`[API] Target URL: ${targetUrl}`);
 
   const body = {
     streetNumber: streetNumberObj, // Must be object
     streetName: streetName,
+    streetType: streetType, // Added Type
     suburb: suburb,
     postcode: postcode,
     clientReference: `TitleFlow-${Date.now()}`
   };
   console.log(`[API] Request Body: ${JSON.stringify(body)}`);
 
-  /* 
+  /*
      DEBUG AUTH:
-     Swagger definition says: 
+     Swagger definition says:
      "Include the provided key in the Authorization header as follows: Authorization: ApiKey <key>"
   */
   console.log(`[API] Auth Header Preview: ApiKey ${API_KEY.substring(0, 10)}...`);
