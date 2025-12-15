@@ -43,10 +43,10 @@ const DocumentList: React.FC<DocumentListProps> = ({ property, documents, onAddT
             <p className="text-gray-500 mt-1">{property.fullAddress}</p>
           </div>
           {property.titleReference && (
-             <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-lg flex flex-col items-end">
-                <span className="text-xs text-blue-500 font-semibold uppercase tracking-wider">Title Reference</span>
-                <span className="text-xl font-mono font-bold text-blue-900">{property.titleReference}</span>
-             </div>
+            <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-lg flex flex-col items-end">
+              <span className="text-xs text-blue-500 font-semibold uppercase tracking-wider">Title Reference</span>
+              <span className="text-xl font-mono font-bold text-blue-900">{property.titleReference}</span>
+            </div>
           )}
         </div>
       </div>
@@ -64,7 +64,7 @@ const DocumentList: React.FC<DocumentListProps> = ({ property, documents, onAddT
                 </div>
                 <div className="text-lg font-bold text-gray-900">${doc.price.toFixed(2)}</div>
               </div>
-              
+
               <h3 className="text-lg font-medium text-gray-900 mb-2">{doc.type}</h3>
               <p className="text-gray-600 text-sm mb-4">{doc.description}</p>
 
@@ -72,8 +72,8 @@ const DocumentList: React.FC<DocumentListProps> = ({ property, documents, onAddT
               {explanation && (
                 <div className="mb-4 bg-purple-50 p-3 rounded-lg border border-purple-100 text-sm text-purple-800 animate-fade-in">
                   <p className="font-semibold text-xs text-purple-600 mb-1 flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>
-                     AI Explanation
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>
+                    AI Explanation
                   </p>
                   {explanation}
                 </div>
@@ -81,15 +81,23 @@ const DocumentList: React.FC<DocumentListProps> = ({ property, documents, onAddT
 
               <div className="flex gap-2 mt-auto">
                 <button
-                  onClick={() => onAddToCart({ propertyId: property.id, address: property.fullAddress, document: doc })}
+                  onClick={() => onAddToCart({
+                    propertyId: property.id,
+                    address: property.fullAddress,
+                    document: doc,
+                    titleReference: property.titleReference,
+                    street: property.street,
+                    suburb: property.suburb,
+                    state: property.state,
+                    postcode: property.postcode
+                  })}
                   disabled={inCart || !doc.available}
-                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                    inCart 
-                      ? 'bg-green-600 text-white cursor-default' 
-                      : !doc.available 
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${inCart
+                      ? 'bg-green-600 text-white cursor-default'
+                      : !doc.available
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
-                  }`}
+                    }`}
                 >
                   {inCart ? 'Added to Order' : doc.available ? 'Add to Order' : 'Unavailable'}
                 </button>
@@ -102,7 +110,7 @@ const DocumentList: React.FC<DocumentListProps> = ({ property, documents, onAddT
                     <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
                   ) : (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                 </button>

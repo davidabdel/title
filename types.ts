@@ -29,6 +29,11 @@ export interface CartItem {
   propertyId: string;
   address: string;
   document: PropertyDocument;
+  titleReference?: string;
+  street?: string;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
 }
 
 export interface OrderItem {

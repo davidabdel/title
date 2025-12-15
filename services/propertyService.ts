@@ -253,24 +253,38 @@ export class PropertyService {
     }));
   }
 
-  async orderDocuments(items: { propertyId: string, documentId: string }[]): Promise<string> {
+  async orderDocuments(items: any[]): Promise<string> {
     if (!USE_MOCK_API) {
       try {
         console.log('[PropertyService] Placing Order via Proxy...');
+        // We only handle the first item for now or assume single-property batch
+        const item = items[0];
+
+        // Construct payload based on available data
+        const payload = {
+          titleReference: item.titleReference,
+          street: item.street, // api/order will need to parse this or address
+          suburb: item.suburb,
+          state: item.state,
+          postcode: item.postcode,
+          clientReference: `TitleFlow-Order-${Date.now()}`
+        };
+
         const response = await fetch(`/api/order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: items.map(i => ({ propertyId: i.propertyId, productCode: i.documentId }))
-          })
+          body: JSON.stringify(payload)
         });
 
         if (response.ok) {
           const data = await response.json();
-          return data.orderId || `ORD-${Math.floor(Math.random() * 1000000)}`;
+          // If the order returned an orderId directly
+          return data.orderId || data.order?.orderId || `ORD-${Math.floor(Math.random() * 1000000)}`;
+        } else {
+          console.error("[PropertyService] Order Proxy Failed", response.status);
         }
       } catch (e) {
-        console.warn("[PropertyService] API Order failed. Using mock order ID.");
+        console.warn("[PropertyService] API Order failed. Using mock order ID.", e);
       }
     }
 
